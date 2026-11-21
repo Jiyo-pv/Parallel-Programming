@@ -280,6 +280,7 @@ class App:
         self.agent.start()
         self.nodes, self.node_on = [], {}
         self.mode = "single"
+        self.show_advanced = False
         self.engine = None
         self.wh = None
         self.db = WarehouseDB()
@@ -297,11 +298,17 @@ class App:
                             for i, n in enumerate((12, 24, 48))]
         self.btn_single = Button((x, 412, 160, 34), "Single PC", lambda: self.set_mode("single"), ACC)
         self.btn_cluster = Button((x + 172, 412, 160, 34), "Cluster (LAN)", lambda: self.set_mode("cluster"), (58, 70, 96))
-        self.st_ranks = Stepper((x, 466), "MPI ranks (processes)", 1, 1, max(1, self.cores), 1, 420)
-        self.st_threads = Stepper((x, 512), "OpenMP threads per rank", self.cores, 1, max(1, self.cores), 1, 420)
+        self.btn_advanced = Button((x, 466, 210, 32), "Advanced: Hidden", self.toggle_advanced, (58, 70, 96))
+        self.st_ranks = Stepper((x, 512), "MPI ranks (processes)", 1, 1, max(1, self.cores), 1, 420)
+        self.st_threads = Stepper((x, 558), "OpenMP threads per rank", self.cores, 1, max(1, self.cores), 1, 420)
         self.btn_discover = Button((x, 466, 160, 34), "Discover laptops", self.do_discover, (44, 148, 118))
         self.btn_start = Button((36, 702, 240, 46), "Start Simulation", self.start_sim, OK)
         self.setup_msg = ""
+
+    def toggle_advanced(self):
+        self.show_advanced = not self.show_advanced
+        self.btn_advanced.label = "Advanced: Shown" if self.show_advanced else "Advanced: Hidden"
+        self.btn_advanced.color = ACC if self.show_advanced else (58, 70, 96)
 
     def set_mode(self, m):
         self.mode = m
@@ -480,7 +487,9 @@ class App:
             ws = [self.st_shelves, self.st_robots, self.st_carry, self.st_cap, self.btn_single, self.btn_cluster,
                   self.btn_start] + self.preset_btns
             if self.mode == "single":
-                ws += [self.st_ranks, self.st_threads]
+                ws += [self.btn_advanced]
+                if self.show_advanced:
+                    ws += [self.st_ranks, self.st_threads]
             else:
                 ws += [self.btn_discover]
                 if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
@@ -573,11 +582,17 @@ class App:
         self.btn_cluster.draw()
         draw_text(screen, "Local CPU cores: %d" % self.cores, F14, DIM, (406, 420))
         if self.mode == "single":
-            self.st_ranks.draw()
-            self.st_threads.draw()
-            draw_text(screen, "No network needed  •  Total parallel workers = %d ranks × %d threads = %d" %
-                      (self.st_ranks.value, self.st_threads.value, self.st_ranks.value * self.st_threads.value),
-                      F14, OK, (56, 566))
+            self.btn_advanced.draw()
+            if self.show_advanced:
+                self.st_ranks.draw()
+                self.st_threads.draw()
+                draw_text(screen, "No network needed  •  Total parallel workers = %d ranks × %d threads = %d" %
+                          (self.st_ranks.value, self.st_threads.value, self.st_ranks.value * self.st_threads.value),
+                          F14, OK, (56, 614))
+            else:
+                draw_text(screen, "Automatic: %d MPI rank × %d OpenMP threads  (no network needed)" %
+                          (self.st_ranks.value, self.st_threads.value),
+                          F14, OK, (56, 514))
         else:
             self.btn_discover.draw()
             draw_text(screen, "Run this app on all Windows 11 laptops on the same Wi-Fi/hotspot.", F12, DIM, (230, 474))
