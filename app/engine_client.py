@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -44,11 +45,20 @@ def encode_batch(d):
 class ProcessEngine:
     """Runs engine exe (optionally under mpiexec) as a persistent child process."""
 
-    def __init__(self, cmd, label):
+    def __init__(self, cmd, label, timeout=8.0):
         self.label = label
+        self.errors = []
+        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                     text=True, bufsize=1)
-        line = self.proc.stdout.readline().strip()
+                                     text=True, bufsize=1, creationflags=flags)
+        first = []
+        t = threading.Thread(target=lambda: first.append(self.proc.stdout.readline().strip()), daemon=True)
+        t.start()
+        t.join(timeout)
+        if t.is_alive():
+            self.proc.kill()
+            raise RuntimeError("engine startup timed out (%.0fs) - check firewall/MS-MPI on remote PC" % timeout)
+        line = first[0] if first else ""
         if not line.startswith("READY"):
             err = ""
             try:
@@ -222,7 +232,7 @@ class PyEngine:
 
 
 def start_engine(ranks=1, threads=0, hosts=None, prefer="auto"):
-    """Pick the best available engine.  hosts = [(ip, cores), ...] enables cluster mode."""
+    """Pick the best available engine.  hosts = [(ip, cores[, exe]), ...] enables cluster mode."""
     mpi_exe = os.path.join(ENGINE_DIR, "engine_mpi.exe")
     ser_exe = os.path.join(ENGINE_DIR, "engine_serial.exe")
     omp_exe = os.path.join(ENGINE_DIR, "engine_omp.exe")
@@ -231,12 +241,16 @@ def start_engine(ranks=1, threads=0, hosts=None, prefer="auto"):
     if prefer != "python":
         if hosts and mpiexec and os.path.exists(mpi_exe):
             cmd = [mpiexec]
-            for i, (ip, cores) in enumerate(hosts):
+            for i, h in enumerate(hosts):
+                ip, cores = h[0], h[1]
+                exe = h[2] if len(h) > 2 and h[2] else mpi_exe
                 if i:
                     cmd.append(":")
-                cmd += ["-n", "1", "-host", ip, "-env", "OMP_NUM_THREADS", str(cores), mpi_exe]
+                cmd += ["-n", "1", "-host", ip, "-env", "OMP_NUM_THREADS", str(cores), exe]
             try:
-                return ProcessEngine(cmd, "C++ MPI+OpenMP cluster")
+                eng = ProcessEngine(cmd, "C++ MPI+OpenMP cluster")
+                eng.errors = errors
+                return eng
             except Exception as e:
                 errors.append(str(e))
         if mpiexec and os.path.exists(mpi_exe):
@@ -244,13 +258,17 @@ def start_engine(ranks=1, threads=0, hosts=None, prefer="auto"):
                 env_cmd = [mpiexec, "-n", str(max(1, ranks))]
                 if threads > 0:
                     env_cmd += ["-env", "OMP_NUM_THREADS", str(threads)]
-                return ProcessEngine(env_cmd + [mpi_exe], "C++ MPI+OpenMP")
+                eng = ProcessEngine(env_cmd + [mpi_exe], "C++ MPI+OpenMP")
+                eng.errors = errors
+                return eng
             except Exception as e:
                 errors.append(str(e))
         for exe, lab in ((omp_exe, "C++ OpenMP"), (ser_exe, "C++ serial")):
             if os.path.exists(exe):
                 try:
-                    return ProcessEngine([exe], lab)
+                    eng = ProcessEngine([exe], lab)
+                    eng.errors = errors
+                    return eng
                 except Exception as e:
                     errors.append(str(e))
     eng = PyEngine()

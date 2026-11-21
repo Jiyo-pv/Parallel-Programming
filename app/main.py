@@ -1,4 +1,5 @@
 """Parallel Warehouse Management & Multi-Robot Retrieval - Pygame application."""
+import math
 import os
 import random
 import sys
@@ -12,8 +13,8 @@ from db import WarehouseDB
 from engine_client import start_engine
 from warehouse import Warehouse
 
-SW, SH = 1320, 800
-PANEL_W = 376
+SW, SH = 1440, 860
+PANEL_W = 356
 PANEL_X = SW - PANEL_W - 14
 
 # Modern dark-slate palette
@@ -80,49 +81,93 @@ def shade(col, f):
     return tuple(max(0, min(255, int(v * f))) for v in col)
 
 
-def draw_robot_sprite(x, y, sz, idle, fdx, fdy, carry_col, label):
-    """Draw a detailed AGV warehouse robot (treads, metallic body, antenna/LED, visor, carried crate)."""
-    ix, iy = int(x), int(y)
-    w = max(14, int(sz * 0.78))
-    h = max(12, int(sz * 0.66))
-    # Ground shadow
-    pygame.draw.ellipse(screen, (8, 10, 16), (ix - w // 2 - 2, iy + h // 4, w + 4, h // 2 + 4))
-    # Wheels / treads
-    tw, th = max(4, w // 4), max(4, h // 3)
-    for wx in (-w // 2 - 1, w // 2 - tw + 1):
-        for wy in (-h // 2 + 1, h // 2 - th - 1):
-            pygame.draw.rect(screen, (18, 22, 30), (ix + wx, iy + wy, tw, th), border_radius=2)
-    # Main metallic chassis
-    body = pygame.Rect(ix - w // 2, iy - h // 2, w, h)
+def draw_robot_sprite(x, y, sz, idle, fdx, fdy, carry_col, label, moving=False, phase=0.0):
+    """Draw a detailed articulated robot (treads, torso, arms, head with eyes, antenna, carried crate)."""
+    ix = int(x)
+    bob = int(round(math.sin(phase) * 1.8)) if moving else 0
+    iy = int(y) + bob
+    w = max(16, int(sz * 0.68))
+    h = max(14, int(sz * 0.56))
+
+    # Ground shadow (stays on floor while robot bobs)
+    pygame.draw.ellipse(screen, (8, 10, 16), (ix - w // 2 - 3, int(y) + h // 3, w + 6, h // 2 + 4))
+
+    # Motion trail / speed lines behind robot when moving
+    if moving and (fdx != 0 or fdy != 0):
+        nlen = math.hypot(fdx, fdy) or 1.0
+        bx, by = -fdx / nlen, -fdy / nlen
+        px_n, py_n = -by, bx
+        trail_col = (251, 146, 60) if carry_col is None else carry_col
+        for off in (-w * 0.24, 0, w * 0.24):
+            sx = ix + int(bx * (w * 0.45) + px_n * off)
+            sy = iy + int(by * (h * 0.45) + py_n * off)
+            ex = sx + int(bx * max(6, sz * 0.28))
+            ey = sy + int(by * max(6, sz * 0.28))
+            pygame.draw.line(screen, shade(trail_col, 0.8), (sx, sy), (ex, ey), 2)
+
+    # Treads / wheels on left & right with animated cleats
+    tw = max(4, int(w * 0.22))
+    th = max(8, int(h * 0.72))
+    for side in (-1, 1):
+        tx = ix + side * (w // 2 + 1) - (tw if side == 1 else 0)
+        ty = iy - th // 2 + 2
+        pygame.draw.rect(screen, (20, 24, 34), (tx, ty, tw, th), border_radius=2)
+        pygame.draw.rect(screen, (55, 65, 85), (tx, ty, tw, th), 1, border_radius=2)
+        step = int(phase * 1.5) % 4 if moving else 0
+        for cy in range(ty + 1 + (step % 3), ty + th - 1, 3):
+            pygame.draw.line(screen, (110, 125, 150), (tx + 1, cy), (tx + tw - 2, cy), 1)
+
+    # Robot arms (raised to hold crate if carrying, slight swing when walking empty)
+    arm_w = max(3, int(w * 0.16))
+    arm_h = max(7, int(h * 0.46))
+    swing = int(math.sin(phase) * 2) if moving and carry_col is None else 0
+    for side in (-1, 1):
+        ax = ix + side * (w // 2 - 1) - (arm_w if side == -1 else 0)
+        ay = (iy - h // 2 - 2) if carry_col is not None else (iy - 2 + side * swing)
+        pygame.draw.rect(screen, (95, 115, 148), (ax, ay, arm_w, arm_h), border_radius=2)
+        pygame.draw.rect(screen, (30, 38, 54), (ax, ay, arm_w, arm_h), 1, border_radius=2)
+
+    # Torso / chassis
     trim = (56, 189, 248) if idle else (251, 146, 60)
-    pygame.draw.rect(screen, (42, 54, 78), body, border_radius=5)
-    pygame.draw.rect(screen, trim, body, 2, border_radius=5)
-    # Top deck plate
-    deck = body.inflate(-6, -6)
-    pygame.draw.rect(screen, (62, 78, 108), deck, border_radius=3)
-    # Directional visor / sensor eyes facing movement direction
-    vx = ix + int(fdx * (w * 0.34))
-    vy = iy + int(fdy * (h * 0.34))
-    if fdx == 0 and fdy == 0:
-        vy = iy - int(h * 0.32)
-    visor_col = (125, 211, 252) if idle else (253, 224, 71)
-    if abs(fdx) >= abs(fdy) and fdx != 0:
-        pygame.draw.rect(screen, visor_col, (vx - 2, vy - 4, 4, 8), border_radius=2)
-    else:
-        pygame.draw.rect(screen, visor_col, (vx - 4, vy - 2, 8, 4), border_radius=2)
-    # Antenna + glowing status LED
-    pygame.draw.line(screen, (180, 195, 220), (ix + w // 3, iy - h // 2), (ix + w // 3, iy - h // 2 - 5), 1)
-    pygame.draw.circle(screen, (52, 211, 153) if not idle else (56, 189, 248), (ix + w // 3, iy - h // 2 - 6), 2)
-    # Robot ID or carried 3D crate
+    torso = pygame.Rect(ix - w // 2 + 2, iy - h // 3, w - 4, int(h * 0.68))
+    pygame.draw.rect(screen, (46, 60, 88), torso, border_radius=4)
+    pygame.draw.rect(screen, trim, torso, 2, border_radius=4)
+    # Chest core indicator
+    core_col = (56, 189, 248) if idle else ((52, 211, 153) if moving else (250, 204, 21))
+    pygame.draw.circle(screen, core_col, (ix, torso.centery + 1), max(2, w // 9))
+
+    # Robot Head on top of torso
+    hw = max(10, int(w * 0.68))
+    hh = max(7, int(h * 0.44))
+    head = pygame.Rect(ix - hw // 2, torso.top - hh + 2, hw, hh)
+    pygame.draw.rect(screen, (68, 86, 122), head, border_radius=4)
+    pygame.draw.rect(screen, trim, head, 1, border_radius=4)
+
+    # Antenna + glowing beacon
+    ant_y = head.top - max(4, int(sz * 0.12))
+    pygame.draw.line(screen, (190, 205, 230), (ix, head.top), (ix, ant_y), 1)
+    pulse = moving and int(phase) % 2 == 0
+    led_col = (110, 255, 200) if pulse else ((56, 189, 248) if idle else (253, 224, 71))
+    pygame.draw.circle(screen, led_col, (ix, ant_y), 2)
+
+    # Two glowing eyes looking in movement direction
+    ex_off = int(max(-1.0, min(1.0, fdx)) * max(1, hw * 0.14))
+    ey_off = int(max(-1.0, min(1.0, fdy)) * max(1, hh * 0.14))
+    eye_col = (125, 211, 252) if idle else (253, 224, 71)
+    eye_r = max(1, hw // 8)
+    for es in (-1, 1):
+        pygame.draw.circle(screen, eye_col, (head.centerx + es * max(2, hw // 4) + ex_off, head.centery + ey_off), eye_r)
+
+    # Carried 3D crate held above head, or robot ID badge below
     if carry_col is not None:
-        cw = max(8, w // 2)
-        cr = pygame.Rect(ix - cw // 2, iy - cw // 2 - 3, cw, cw - 1)
+        cw = max(10, int(w * 0.56))
+        cr = pygame.Rect(ix - cw // 2, head.top - cw + 2, cw, cw - 1)
         pygame.draw.rect(screen, shade(carry_col, 0.72), (cr.x, cr.y + 3, cr.w, cr.h), border_radius=2)
         pygame.draw.rect(screen, carry_col, cr, border_radius=2)
         pygame.draw.rect(screen, (255, 255, 255), cr, 1, border_radius=2)
         draw_text(screen, label, F10, (15, 20, 30) if sum(carry_col) > 380 else (255, 255, 255), cr.center, center=True)
     else:
-        draw_text(screen, label, F10, (235, 242, 255), (ix, iy), center=True)
+        draw_text(screen, label, F10, (235, 242, 255), (ix, torso.bottom + 6), center=True)
 
 
 # ------------------------------------------------------------------------------------------------ widgets
@@ -278,6 +323,7 @@ class App:
         self.cores = cluster.logical_cores()
         self.agent = cluster.Agent()
         self.agent.start()
+        self.smpd_proc = cluster.start_smpd()
         self.nodes, self.node_on = [], {}
         self.mode = "single"
         self.show_advanced = False
@@ -326,7 +372,7 @@ class App:
     def start_sim(self):
         hosts = None
         if self.mode == "cluster":
-            hosts = [(n["ip"], n["cores"]) for n in self.nodes if self.node_on.get(n["ip"])]
+            hosts = [(n["ip"], n["cores"], n.get("exe")) for n in self.nodes if self.node_on.get(n["ip"])]
             if len(hosts) < 1:
                 self.setup_msg = "Select at least one laptop"
                 return
@@ -343,6 +389,8 @@ class App:
         self.db.sync_inventory(self.wh)
         self.threads_cfg = self.st_threads.value if self.mode == "single" else 0
         self.build_main()
+        if getattr(self.engine, "errors", None):
+            self.say("Cluster fallback: " + self.engine.errors[0], WARN)
         self.scene = "main"
 
     # ---------------------------------------------------------------- main scene
@@ -384,18 +432,18 @@ class App:
         self.msg, self.msg_color = "Ready. Submit a request or click a shelf.", DIM
         self.hover_shelf = None
         L = wh.layout
-        avail_w = PANEL_X - 44
-        avail_h = SH - 170
-        self.cell = max(16, min(int(avail_w / L["W"]), int(avail_h / L["H"])))
-        self.ox = 20 + (avail_w - L["W"] * self.cell) // 2
-        self.oy = 82
+        avail_w = PANEL_X - 24
+        avail_h = SH - 124
+        self.cell = max(18, min(int(avail_w / L["W"]), int(avail_h / L["H"])))
+        self.ox = 12 + (avail_w - L["W"] * self.cell) // 2
+        self.oy = 70
         # Isometric 3D projection parameters
         span = L["W"] + L["H"]
-        self.iso_tw = max(10.0, min((avail_w - 40) / max(1, span), (avail_h - 60) / max(1, span * 0.56)))
+        self.iso_tw = max(11.0, min((avail_w - 20) / max(1, span), (avail_h - 32) / max(1, span * 0.54)))
         self.iso_th = self.iso_tw * 0.52
         self.iso_zh = self.iso_tw * 1.05
-        self.iso_cx = 20 + avail_w / 2.0 - (L["W"] - L["H"]) * self.iso_tw * 0.1
-        self.iso_cy = 96.0 + self.iso_zh * 0.4
+        self.iso_cx = 12 + avail_w / 2.0 - (L["W"] - L["H"]) * self.iso_tw * 0.1
+        self.iso_cy = 72.0 + self.iso_zh * 0.35
         self.tick_dt = 0.2
         self.last_tick_time = time.time()
 
@@ -770,10 +818,13 @@ class App:
 
         # Planned paths along the 3D floor
         alpha = min(1.0, (time.time() - self.last_tick_time) / (self.tick_dt / max(1, self.speed))) if not self.paused else 1.0
+        now_t = time.time()
         if self.show_paths:
             for r in wh.robots:
                 if r.trip and r.k < len(r.path):
-                    pts = [self.iso_pt(r.x + 0.5, r.y + 0.5, 0.05)] + [self.iso_pt(p[0] + 0.5, p[1] + 0.5, 0.05) for p in r.path[r.k:]]
+                    fx = r.px + (r.x - r.px) * alpha
+                    fy = r.py + (r.y - r.py) * alpha
+                    pts = [self.iso_pt(fx + 0.5, fy + 0.5, 0.05)] + [self.iso_pt(p[0] + 0.5, p[1] + 0.5, 0.05) for p in r.path[r.k:]]
                     col = wh.products[r.trip.shelf.product][1]
                     for i in range(0, len(pts) - 1, 2):
                         pygame.draw.line(screen, col, pts[i], pts[i + 1], 2)
@@ -812,8 +863,10 @@ class App:
                 r, fx, fy = obj
                 px, py = self.iso_pt(fx + 0.5, fy + 0.5, 0.12)
                 carry_col = wh.products[r.carrying][1] if r.carrying is not None else None
-                draw_robot_sprite(px, py, rsz, r.idle, r.x - r.px, r.y - r.py, carry_col, "R%d" % (r.id + 1))
-                self.draw_robot_badge(r, px, py, int(rsz * 0.45) + 8)
+                moving = (not self.paused) and (r.x != r.px or r.y != r.py)
+                draw_robot_sprite(px, py, rsz, r.idle, r.x - r.px, r.y - r.py, carry_col,
+                                  "R%d" % (r.id + 1), moving=moving, phase=now_t * 14.0 + r.id * 1.3)
+                self.draw_robot_badge(r, px, py, int(rsz * 0.52) + 12)
 
     def draw_world_2d(self):
         wh, c = self.wh, self.cell
@@ -876,10 +929,13 @@ class App:
 
         # Planned paths
         alpha = min(1.0, (time.time() - self.last_tick_time) / (self.tick_dt / max(1, self.speed))) if not self.paused else 1.0
+        now_t = time.time()
         if self.show_paths:
             for r in wh.robots:
                 if r.trip and r.k < len(r.path):
-                    pts = [self.center(r.x, r.y)] + [self.center(*p) for p in r.path[r.k:]]
+                    fx = r.px + (r.x - r.px) * alpha
+                    fy = r.py + (r.y - r.py) * alpha
+                    pts = [self.center(fx, fy)] + [self.center(*p) for p in r.path[r.k:]]
                     col = wh.products[r.trip.shelf.product][1]
                     for i in range(0, len(pts) - 1, 2):
                         pygame.draw.line(screen, col, pts[i], pts[i + 1], 2)
@@ -890,8 +946,10 @@ class App:
             qx, qy = self.center(r.x, r.y)
             x, y = px + (qx - px) * alpha, py + (qy - py) * alpha
             carry_col = wh.products[r.carrying][1] if r.carrying is not None else None
-            draw_robot_sprite(x, y, c, r.idle, r.x - r.px, r.y - r.py, carry_col, "R%d" % (r.id + 1))
-            self.draw_robot_badge(r, x, y, int(c * 0.42) + 8)
+            moving = (not self.paused) and (r.x != r.px or r.y != r.py)
+            draw_robot_sprite(x, y, c, r.idle, r.x - r.px, r.y - r.py, carry_col,
+                              "R%d" % (r.id + 1), moving=moving, phase=now_t * 14.0 + r.id * 1.3)
+            self.draw_robot_badge(r, x, y, int(c * 0.48) + 12)
 
     def draw_panel(self):
         wh = self.wh
@@ -919,19 +977,19 @@ class App:
         self.btn_addprod.draw()
 
         # Card 3: Requests list
-        draw_card((PANEL_X, 414, PANEL_W, 314), "REQUESTS & DROP STATUS")
+        draw_card((PANEL_X, 414, PANEL_W, SH - 486), "REQUESTS & DROP STATUS")
         y = 450
-        for req in reversed(wh.requests[-9:]):
+        for req in reversed(wh.requests[-11:]):
             col = {"COMPLETED": OK, "REJECTED": BAD, "IN_PROGRESS": WARN, "ALLOCATED": ACC}.get(req.status, TXT)
             line = "#%d  %-8s  x%-3d  %s" % (req.id, wh.products[req.product][0][:8], req.qty, req.status.replace("_", " "))
             draw_text(screen, line, F12B, col, (px, y))
             if req.status in ("IN_PROGRESS", "COMPLETED"):
                 draw_text(screen, "%d/%d" % (req.delivered, req.qty), F12, DIM, (PANEL_X + PANEL_W - 14, y), right=True)
             y += 26
-        draw_text(screen, "Pending trips in queue: %d" % len(wh.pending), F12, DIM, (px, 704))
+        draw_text(screen, "Pending trips in queue: %d" % len(wh.pending), F12, DIM, (px, SH - 96))
 
         # Status toast bar
-        toast_r = pygame.Rect(PANEL_X, 738, PANEL_W, 48)
+        toast_r = pygame.Rect(PANEL_X, SH - 62, PANEL_W, 48)
         pygame.draw.rect(screen, CARD, toast_r, border_radius=8)
         pygame.draw.rect(screen, self.msg_color if self.msg_color != DIM else BORDER, toast_r, 1, border_radius=8)
         draw_text(screen, self.msg[:50], F12B, self.msg_color, (toast_r.x + 12, toast_r.y + 16))
@@ -974,6 +1032,8 @@ class App:
             clock.tick(60)
         if self.engine:
             self.engine.close()
+        if self.smpd_proc:
+            self.smpd_proc.terminate()
         self.db.close()
         self.agent.running = False
         pygame.quit()

@@ -3,11 +3,16 @@ import json
 import os
 import socket
 import subprocess
+import sys
 import threading
 import time
 
 PORT = 5600
 MAGIC = b"WAREHOUSE_DISCOVER"
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(HERE)
+ENGINE_EXE = os.path.join(ROOT, "engine", "engine_mpi.exe")
+MPI_DIR = os.path.join(ROOT, "mpi")
 
 
 def local_ip():
@@ -35,7 +40,7 @@ def logical_cores():
 
 def node_info():
     return {"host": socket.gethostname(), "ip": local_ip(), "cores": logical_cores(),
-            "physical": physical_cores()}
+            "physical": physical_cores(), "exe": ENGINE_EXE}
 
 
 class Agent(threading.Thread):
@@ -96,12 +101,17 @@ def discover(timeout=1.5):
     return sorted(found.values(), key=lambda n: n["ip"])
 
 
-def start_smpd(mpi_dir):
+def start_smpd(mpi_dir=None):
     """Best effort: start the bundled MS-MPI daemon so other laptops can launch ranks here."""
-    exe = os.path.join(mpi_dir, "smpd.exe")
-    if os.path.exists(exe):
-        try:
-            return subprocess.Popen([exe, "-d", "0"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception:
-            return None
+    candidates = [mpi_dir] if mpi_dir else []
+    candidates += [MPI_DIR, r"C:\Program Files\Microsoft MPI\Bin"]
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    for d in candidates:
+        exe = os.path.join(d, "smpd.exe")
+        if os.path.exists(exe):
+            try:
+                return subprocess.Popen([exe, "-d", "0"], stdout=subprocess.DEVNULL,
+                                        stderr=subprocess.DEVNULL, creationflags=flags)
+            except Exception:
+                return None
     return None
