@@ -14062,3 +14062,60 @@ events:
         
       exitCode: 0
 ...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Users/jiyop/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/share/cmake-4.4/Modules/FindMPI.cmake:1447 (try_compile)"
+      - "C:/Users/jiyop/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/share/cmake-4.4/Modules/FindMPI.cmake:1491 (_MPI_try_staged_settings)"
+      - "C:/Users/jiyop/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/share/cmake-4.4/Modules/FindMPI.cmake:1814 (_MPI_check_lang_works)"
+      - "CMakeLists.txt:28 (find_package)"
+    description: "The MPI test test_mpi for CXX in mode normal"
+    directories:
+      source: "C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/build/CMakeFiles/CMakeScratch/TryCompile-x18oev"
+      binary: "C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/build/CMakeFiles/CMakeScratch/TryCompile-x18oev"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_CXX_STDLIB_MODULES_JSON: ""
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_normal"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/build/CMakeFiles/CMakeScratch/TryCompile-x18oev'
+        
+        Run Build Command(s): C:/Users/jiyop/AppData/Local/Programs/Python/Python314/Scripts/ninja.exe -v cmTC_2837e
+        [1/2] C:\\Users\\jiyop\\AppData\\Local\\Microsoft\\WinGet\\Packages\\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\\mingw64\\bin\\c++.exe  -isystem "C:/Program Files (x86)/Microsoft SDKs/MPI/Include" -std=gnu++17 -o CMakeFiles/cmTC_2837e.dir/test_mpi.cpp.obj -c "C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/build/CMakeFiles/CMakeScratch/TryCompile-x18oev/test_mpi.cpp"
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && C:\\Users\\jiyop\\AppData\\Local\\Microsoft\\WinGet\\Packages\\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\\mingw64\\bin\\c++.exe   CMakeFiles/cmTC_2837e.dir/test_mpi.cpp.obj -o cmTC_2837e.exe -Wl,--out-implib,libcmTC_2837e.dll.a -Wl,--major-image-version,0,--minor-image-version,0  "C:/Program Files (x86)/Microsoft SDKs/MPI/Lib/x64/msmpi.lib"  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 && cd ."
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Users/jiyop/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/share/cmake-4.4/Modules/FindMPI.cmake:1447 (try_compile)"
+      - "C:/Users/jiyop/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/share/cmake-4.4/Modules/FindMPI.cmake:1841 (_MPI_try_staged_settings)"
+      - "CMakeLists.txt:28 (find_package)"
+    description: "The MPI test test_mpi for CXX in mode MPICXX"
+    directories:
+      source: "C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/build/CMakeFiles/CMakeScratch/TryCompile-qjsg2x"
+      binary: "C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/build/CMakeFiles/CMakeScratch/TryCompile-qjsg2x"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_CXX_STDLIB_MODULES_JSON: ""
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "MPI_RESULT_CXX_test_mpi_MPICXX"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/build/CMakeFiles/CMakeScratch/TryCompile-qjsg2x'
+        
+        Run Build Command(s): C:/Users/jiyop/AppData/Local/Programs/Python/Python314/Scripts/ninja.exe -v cmTC_beb8b
+        [1/2] C:\\Users\\jiyop\\AppData\\Local\\Microsoft\\WinGet\\Packages\\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\\mingw64\\bin\\c++.exe  -isystem "C:/Program Files (x86)/Microsoft SDKs/MPI/Include" -std=gnu++17 -o CMakeFiles/cmTC_beb8b.dir/test_mpi.cpp.obj -c "C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/build/CMakeFiles/CMakeScratch/TryCompile-qjsg2x/test_mpi.cpp"
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && C:\\Users\\jiyop\\AppData\\Local\\Microsoft\\WinGet\\Packages\\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\\mingw64\\bin\\c++.exe   CMakeFiles/cmTC_beb8b.dir/test_mpi.cpp.obj -o cmTC_beb8b.exe -Wl,--out-implib,libcmTC_beb8b.dll.a -Wl,--major-image-version,0,--minor-image-version,0  "C:/Program Files (x86)/Microsoft SDKs/MPI/Lib/x64/msmpi.lib"  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 && cd ."
+        
+      exitCode: 0
+...

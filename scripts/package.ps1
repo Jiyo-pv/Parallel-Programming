@@ -1,5 +1,6 @@
 # Package WarehouseSim into a portable Windows 11 folder and .zip (no extra installation for end users)
 $ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
 $Root = Split-Path -Parent $PSScriptRoot
 $DistDir = Join-Path $Root "dist\WarehouseSim-win64"
 

@@ -1,4 +1,4 @@
-WarehouseSim - Portable Windows Edition
+﻿WarehouseSim - Portable Windows Edition
 =======================================
 
 How to Run
