@@ -1,0 +1,5 @@
+C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/build/CMakeFiles/engine_serial.dir
+C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/build/CMakeFiles/engine_omp.dir
+C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/build/CMakeFiles/engine_mpi.dir
+C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/build/CMakeFiles/edit_cache.dir
+C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/build/CMakeFiles/rebuild_cache.dir

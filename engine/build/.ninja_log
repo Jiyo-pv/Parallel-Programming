@@ -1,0 +1,7 @@
+# ninja log v7
+28	3462	8168992346116422	CMakeFiles/engine_omp.dir/engine.cpp.obj	f4a4ab9bb9d331d9
+21	3500	8168992346036703	CMakeFiles/engine_serial.dir/engine.cpp.obj	64b2d7e1eef8e32f
+3477	3638	8168992380606033	C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/engine_omp.exe	67c07bc3c1e20367
+3501	3655	8168992380846052	C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/engine_serial.exe	1453e0126fb59ea3
+25	3713	8168995532783642	CMakeFiles/engine_mpi.dir/engine.cpp.obj	bc7a0a82e4d800b9
+3714	3875	8168995569670481	C:/Users/jiyop/Downloads/parallel programming/parallel-warehouse/engine/engine_mpi.exe	9f7879c043f28581
